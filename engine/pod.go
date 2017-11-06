@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/laincloud/deployd/cluster"
+	"github.com/laincloud/deployd/extentions/handler"
 	"github.com/mijia/adoc"
 	"github.com/mijia/go-generics"
 	"github.com/mijia/sweb/log"
@@ -70,6 +71,7 @@ func (pc *podController) Deploy(cluster cluster.Cluster) {
 			log.Warnf("%s Cannot start container %s, %s", pc, id, err)
 			pc.pod.State = RunStateFail
 			pc.pod.LastError = fmt.Sprintf("Cannot start container, %s", err)
+			pc.handleError(err, i)
 		}
 
 		pc.pod.Containers[i].Id = id
@@ -194,6 +196,7 @@ func (pc *podController) Start(cluster cluster.Cluster) {
 			log.Warnf("%s Cannot start the container %s, %s", pc, container.Id, err)
 			pc.pod.State = RunStateFail
 			pc.pod.LastError = fmt.Sprintf("Cannot start container, %s", err)
+			pc.handleError(err, i)
 		} else {
 			pc.refreshContainer(cluster, i)
 		}
@@ -471,4 +474,16 @@ func (pc *podController) createNetworkingConfig(index int) adoc.NetworkingConfig
 		},
 	}
 	return nc
+}
+
+func (pc *podController) handleError(err error, index int) {
+	es := handler.ErrorSpec{
+		Network:       pc.spec.Namespace,
+		ContainerId:   pc.pod.Containers[index].Id,
+		ContainerName: pc.createContainerName(index),
+		PrevIP:        pc.spec.PrevState.IPs[index],
+		Message:       err.Error(),
+	}
+
+	calicoErrHandler.Handle(es)
 }

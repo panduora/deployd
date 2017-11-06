@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/laincloud/deployd/cluster"
+	"github.com/laincloud/deployd/extentions/handler"
 	"github.com/laincloud/deployd/storage"
 	"github.com/mijia/adoc"
 	"github.com/mijia/sweb/log"
@@ -18,6 +19,8 @@ var RefreshInterval int
 var cstController *constraintController
 
 var ntfController *notifyController
+
+var calicoErrHandler *handler.CalicoHandler
 
 var (
 	ErrPodGroupExists         = errors.New("PodGroup has already existed")
@@ -535,6 +538,8 @@ func New(cluster cluster.Cluster, store storage.Store) (*OrcEngine, error) {
 	//return nil, err
 	//}
 	engine.eagleView = eagleView
+
+	calicoErrHandler = handler.NewCalicoHandler(cluster, store)
 
 	cstController = NewConstraintController()
 	if err := cstController.LoadConstraints(engine.store); err != nil {
