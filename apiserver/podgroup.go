@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/laincloud/deployd/engine"
+	"github.com/laincloud/deployd/model"
 	"github.com/mijia/sweb/form"
 	"github.com/mijia/sweb/log"
 	"github.com/mijia/sweb/server"
@@ -16,7 +17,7 @@ type RestfulPodGroups struct {
 }
 
 func (rpg RestfulPodGroups) Post(ctx context.Context, r *http.Request) (int, interface{}) {
-	var pgSpec engine.PodGroupSpec
+	var pgSpec model.PodGroupSpec
 	if err := form.ParamBodyJson(r, &pgSpec); err != nil {
 		log.Warnf("Failed to decode PodGroupSpec, %s", err)
 		return http.StatusBadRequest, fmt.Sprintf("Invalid PodGroupSpec params format: %s", err)
@@ -102,22 +103,22 @@ func (rpg RestfulPodGroups) Patch(ctx context.Context, r *http.Request) (int, in
 		restartPolicy := -1
 		switch restartOption {
 		case "never":
-			restartPolicy = engine.RestartPolicyNever
+			restartPolicy = model.RestartPolicyNever
 		case "always":
-			restartPolicy = engine.RestartPolicyAlways
+			restartPolicy = model.RestartPolicyAlways
 		case "onfail":
-			restartPolicy = engine.RestartPolicyOnFail
+			restartPolicy = model.RestartPolicyOnFail
 		}
 		if numInstance < 0 {
 			return http.StatusBadRequest, fmt.Sprintf("Bad parameter for num_instances, should be > 0 but %d", numInstance)
 		}
 		if restartPolicy != -1 {
-			err = orcEngine.RescheduleInstance(pgName, numInstance, engine.RestartPolicy(restartPolicy))
+			err = orcEngine.RescheduleInstance(pgName, numInstance, model.RestartPolicy(restartPolicy))
 		} else {
 			err = orcEngine.RescheduleInstance(pgName, numInstance)
 		}
 	case "spec":
-		var podSpec engine.PodSpec
+		var podSpec model.PodSpec
 		if bodyErr := form.ParamBodyJson(r, &podSpec); bodyErr != nil {
 			return http.StatusBadRequest, fmt.Sprintf("Bad parameter format for PodSpec, %s", bodyErr)
 		}

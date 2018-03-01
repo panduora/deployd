@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/laincloud/deployd/cluster"
+	. "github.com/laincloud/deployd/model"
 	"github.com/mijia/adoc"
 	"github.com/mijia/sweb/log"
 )
@@ -71,7 +72,7 @@ func (ev *RuntimeEagleView) RefreshPodGroup(c cluster.Cluster, pgName string) ([
 	}()
 
 	filters := []string{
-		fmt.Sprintf("%s.pg_name=%s", kLainLabelPrefix, pgName),
+		fmt.Sprintf("%s.pg_name=%s", LainLabelPrefix, pgName),
 	}
 	pods, err := ev.refreshByFilters(c, filters)
 	totalContainers = len(pods)
@@ -87,7 +88,7 @@ func (ev *RuntimeEagleView) RefreshPodsByNamespace(c cluster.Cluster, namespace 
 	}()
 
 	filters := []string{
-		fmt.Sprintf("%s.pg_namespace=%s", kLainLabelPrefix, namespace),
+		fmt.Sprintf("%s.pg_namespace=%s", LainLabelPrefix, namespace),
 	}
 	pods, err := ev.refreshByFilters(c, filters)
 	totalContainers = len(pods)

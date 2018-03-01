@@ -1,5 +1,9 @@
 package engine
 
+import (
+	. "github.com/laincloud/deployd/model"
+)
+
 type orcOperation interface {
 	Do(engine *OrcEngine)
 }

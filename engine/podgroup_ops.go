@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/laincloud/deployd/cluster"
+	. "github.com/laincloud/deployd/model"
 	"github.com/laincloud/deployd/storage"
 	"github.com/mijia/adoc"
 	"github.com/mijia/go-generics"

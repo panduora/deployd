@@ -12,6 +12,7 @@ import (
 
 	"github.com/laincloud/deployd/apiserver"
 	"github.com/laincloud/deployd/engine"
+	"github.com/laincloud/deployd/model"
 	"github.com/laincloud/deployd/utils/elector"
 	"github.com/laincloud/deployd/utils/proxy"
 	"github.com/mijia/sweb/log"
@@ -52,8 +53,8 @@ func main() {
 
 	engine.DependsGarbageCollectTimeout = time.Duration(dependsGCTime) * time.Minute
 	engine.RefreshInterval = refreshInterval
-	engine.RestartMaxCount = maxRestartTimes
 	engine.RestartInfoClearInterval = time.Duration(restartInfoClearInterval) * time.Minute
+	model.RestartMaxCount = maxRestartTimes
 
 	server := apiserver.New(swarmAddr, etcdAddr, isDebug)
 

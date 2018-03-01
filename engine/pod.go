@@ -9,6 +9,8 @@ import (
 
 	"github.com/laincloud/deployd/cluster"
 	"github.com/laincloud/deployd/extentions/handler"
+	. "github.com/laincloud/deployd/model"
+
 	"github.com/mijia/adoc"
 	"github.com/mijia/go-generics"
 	"github.com/mijia/sweb/log"

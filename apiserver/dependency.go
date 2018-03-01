@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/laincloud/deployd/engine"
+	"github.com/laincloud/deployd/model"
 
 	"github.com/mijia/sweb/form"
 	"github.com/mijia/sweb/log"
@@ -53,7 +54,7 @@ func (rdp RestfulDependPods) Delete(ctx context.Context, r *http.Request) (int, 
 }
 
 func (rdp RestfulDependPods) Put(ctx context.Context, r *http.Request) (int, interface{}) {
-	var podSpec engine.PodSpec
+	var podSpec model.PodSpec
 	if err := form.ParamBodyJson(r, &podSpec); err != nil {
 		return http.StatusBadRequest, fmt.Sprintf("Bad parameter format for PodSpec, %s", err)
 	}
@@ -76,7 +77,7 @@ func (rdp RestfulDependPods) Put(ctx context.Context, r *http.Request) (int, int
 }
 
 func (rdp RestfulDependPods) Post(ctx context.Context, r *http.Request) (int, interface{}) {
-	var podSpec engine.PodSpec
+	var podSpec model.PodSpec
 	if err := form.ParamBodyJson(r, &podSpec); err != nil {
 		log.Warnf("Failed to decode PodSpec, %s", err)
 		return http.StatusBadRequest, fmt.Sprintf("Bad parameter format for PodSpec, %s", err)
