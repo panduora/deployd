@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mijia/adoc"
 	"github.com/laincloud/deployd/cluster"
+	"github.com/laincloud/deployd/model"
+	"github.com/mijia/adoc"
 )
 
 type SwarmCluster struct {
@@ -30,6 +31,25 @@ func (c *SwarmCluster) GetResources() ([]cluster.Node, error) {
 		}
 		return nodes, nil
 	}
+}
+
+func (c *SwarmCluster) ListPodGroups(showAll bool, filters ...string) ([]model.PodGroup, error) {
+	return nil, nil
+}
+
+func (c *SwarmCluster) CreatePodGroup(spec model.PodGroupSpec) (model.PodGroup, error) {
+	// 1. init podctls, podgroup
+	// 2. use podctl deploy instance
+	// 3. assemble podgroup
+	return model.PodGroup{}, nil
+}
+
+func (c *SwarmCluster) InspectPodGroup(spec model.PodGroupSpec) (model.PodGroup, error) {
+	return model.PodGroup{}, nil
+}
+
+func (c *SwarmCluster) PatchPodGroup(spec model.PodGroupSpec) (model.PodGroup, error) {
+	return model.PodGroup{}, nil
 }
 
 func NewCluster(addr string, timeout, rwTimeout time.Duration, debug ...bool) (cluster.Cluster, error) {

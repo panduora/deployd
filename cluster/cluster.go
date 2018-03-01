@@ -1,6 +1,9 @@
 package cluster
 
-import "github.com/mijia/adoc"
+import (
+	"github.com/laincloud/deployd/model"
+	"github.com/mijia/adoc"
+)
 
 type Node struct {
 	Name       string
@@ -23,6 +26,13 @@ func (n Node) SpareMemory() int64 {
 type Cluster interface {
 	GetResources() ([]Node, error)
 
+	// new APIs for k8s
+	ListPodGroups(showAll bool, filters ...string) ([]model.PodGroup, error)
+	CreatePodGroup(spec model.PodGroupSpec) (model.PodGroup, error)
+	InspectPodGroup(spec model.PodGroupSpec) (model.PodGroup, error)
+	PatchPodGroup(spec model.PodGroupSpec) (model.PodGroup, error)
+
+	// will deprecated methods
 	ListContainers(showAll bool, showSize bool, filters ...string) ([]adoc.Container, error)
 	CreateContainer(cc adoc.ContainerConfig, hc adoc.HostConfig, nc adoc.NetworkingConfig, name ...string) (string, error)
 	ConnectContainer(networkName string, id string, ipAddr string) error
