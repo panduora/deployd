@@ -47,12 +47,6 @@ func (pgCtrl *podGroupController) Inspect() PodGroupWithSpec {
 func (pgCtrl *podGroupController) IsHealthy() bool {
 	pgCtrl.RLock()
 	defer pgCtrl.RUnlock()
-	for _, pc := range pgCtrl.podCtrls {
-		if pc.pod.PodIp() == "" {
-			ntfController.Send(NewNotifySpec(pc.spec.Namespace, pc.spec.Name, pc.pod.InstanceNo, NotifyPodIPLost))
-			return false
-		}
-	}
 	return true
 }
 
@@ -74,14 +68,15 @@ func (pgCtrl *podGroupController) Deploy() {
 	pgCtrl.RUnlock()
 
 	pgCtrl.opsChan <- pgOperLogOperation{"Start to deploy"}
-	pgCtrl.opsChan <- pgOperSaveStore{true}
-	pgCtrl.opsChan <- pgOperSnapshotEagleView{spec.Name}
-	for i := 0; i < spec.NumInstances; i += 1 {
-		pgCtrl.opsChan <- pgOperDeployInstance{i + 1, spec.Version}
-	}
-	pgCtrl.opsChan <- pgOperSnapshotGroup{true}
-	pgCtrl.opsChan <- pgOperSnapshotPrevState{}
-	pgCtrl.opsChan <- pgOperSaveStore{true}
+	//pgCtrl.opsChan <- pgOperSaveStore{true}
+	//pgCtrl.opsChan <- pgOperSnapshotEagleView{spec.Name}
+	//for i := 0; i < spec.NumInstances; i += 1 {
+	//pgCtrl.opsChan <- pgOperDeployInstance{i + 1, spec.Version}
+	//}
+	pgCtrl.opsChan <- pgOperDeploy{spec.Version}
+	//pgCtrl.opsChan <- pgOperSnapshotGroup{true}
+	//pgCtrl.opsChan <- pgOperSnapshotPrevState{}
+	//pgCtrl.opsChan <- pgOperSaveStore{true}
 	pgCtrl.opsChan <- pgOperLogOperation{"deploy finished"}
 }
 

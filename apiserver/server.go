@@ -3,7 +3,7 @@ package apiserver
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/laincloud/deployd/cluster/swarm"
+	"github.com/laincloud/deployd/cluster/k8s"
 	"github.com/laincloud/deployd/engine"
 	setcd "github.com/laincloud/deployd/storage/etcd"
 	"github.com/mijia/adoc"
@@ -22,16 +22,16 @@ type UrlReverser interface {
 type Server struct {
 	*server.Server
 
-	swarmAddress string
-	etcdAddress  string
-	isDebug      bool
-	started      bool
-	engine       *engine.OrcEngine
-	runtime      *server.RuntimeWare
+	orcBackendAddress string
+	etcdAddress       string
+	isDebug           bool
+	started           bool
+	engine            *engine.OrcEngine
+	runtime           *server.RuntimeWare
 }
 
 func (s *Server) ListenAndServe(addr string) error {
-	orcEngine, err := initOrcEngine(s.swarmAddress, s.etcdAddress, s.isDebug)
+	orcEngine, err := initOrcEngine(s.orcBackendAddress, s.etcdAddress, s.isDebug)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,6 @@ func (s *Server) ListenAndServe(addr string) error {
 	s.AddRestfulResource("/api/nodes", "RestfulNodes", RestfulNodes{})
 	s.AddRestfulResource("/api/status", "RestfulStatus", RestfulStatus{})
 	s.AddRestfulResource("/api/constraints", "RestfulConstraints", RestfulConstraints{})
-	s.AddRestfulResource("/api/notifies", "RestfulNotifies", RestfulNotifies{})
 
 	s.Get("/debug/vars", "RuntimeStat", s.getRuntimeStat)
 	s.NotFound(func(ctx context.Context, w http.ResponseWriter, r *http.Request) context.Context {
@@ -164,27 +163,28 @@ type ApiError struct {
 	Data    interface{} `json:"data"`
 }
 
-func initOrcEngine(swarmAddr string, etcdAddr string, isDebug bool) (*engine.OrcEngine, error) {
+func initOrcEngine(orcBackendAddr string, etcdAddr string, isDebug bool) (*engine.OrcEngine, error) {
 	store, err := setcd.NewStore(etcdAddr, isDebug)
 	if err != nil {
 		return nil, err
 	}
 
-	cluster, err := swarm.NewCluster(swarmAddr, 30*time.Second, 10*time.Minute, isDebug)
+	// FIXME: abstract this init
+	cluster, err := k8s.NewCluster(orcBackendAddr, 30*time.Second, 10*time.Minute, isDebug)
 	if err != nil {
 		return nil, err
 	}
 	return engine.New(cluster, store)
 }
 
-func New(swarmAddr, etcdAddr string, isDebug bool) *Server {
+func New(orcBackendAddr, etcdAddr string, isDebug bool) *Server {
 	srv := &Server{
-		swarmAddress: swarmAddr,
-		etcdAddress:  etcdAddr,
-		isDebug:      isDebug,
-		started:      false,
-		engine:       nil,
-		runtime:      nil,
+		orcBackendAddress: orcBackendAddr,
+		etcdAddress:       etcdAddr,
+		isDebug:           isDebug,
+		started:           false,
+		engine:            nil,
+		runtime:           nil,
 	}
 	if isDebug {
 		adoc.EnableDebug()

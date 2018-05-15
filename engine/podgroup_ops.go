@@ -176,7 +176,6 @@ func (op pgOperRefreshInstance) Do(pgCtrl *podGroupController, c cluster.Cluster
 			}
 		} else {
 			log.Warnf("PodGroupCtrl %s, we found pod missing, just redeploy it", op.spec)
-			ntfController.Send(NewNotifySpec(podCtrl.spec.Namespace, podCtrl.spec.Name, op.instanceNo, NotifyPodMissing))
 			newPodSpec := podCtrl.spec.Clone()
 			prevNodeName := newPodSpec.PrevState.NodeName
 			if newPodSpec.IsHardStateful() {
@@ -206,11 +205,9 @@ func (op pgOperRefreshInstance) Do(pgCtrl *podGroupController, c cluster.Cluster
 	}
 	if podCtrl.pod.NeedRestart(op.spec.RestartPolicy) {
 		if podCtrl.pod.RestartEnoughTimes() {
-			ntfController.Send(NewNotifySpec(podCtrl.spec.Namespace, podCtrl.spec.Name, op.instanceNo, NotifyLetPodGo))
 			return false
 		}
 		log.Warnf("PodGroupCtrl %s, we found pod down, just restart it", op.spec)
-		ntfController.Send(NewNotifySpec(podCtrl.spec.Namespace, podCtrl.spec.Name, op.instanceNo, NotifyPodDown))
 		podCtrl.Start(c)
 		runtime = podCtrl.pod.ImRuntime
 		if runtime.State == RunStateSuccess {
@@ -250,6 +247,21 @@ func (op pgOperVerifyInstanceCount) Do(pgCtrl *podGroupController, c cluster.Clu
 			rmCount++
 		}
 	}
+	return false
+}
+
+type pgOperDeploy struct {
+	version int
+}
+
+func (op pgOperDeploy) Do(pgCtrl *podGroupController, c cluster.Cluster, store storage.Store, ev *RuntimeEagleView) bool {
+	var runtime ImRuntime
+	start := time.Now()
+	defer func() {
+		pgCtrl.RLock()
+		log.Infof("%s deploy instance, op=%+v, runtime=%+v, duration=%s", pgCtrl, op, runtime, time.Now().Sub(start))
+		pgCtrl.RUnlock()
+	}()
 	return false
 }
 

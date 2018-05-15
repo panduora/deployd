@@ -1,12 +1,13 @@
 package k8s
 
 import (
-	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/laincloud/deployd/cluster"
 	"github.com/laincloud/deployd/model"
-	"path/filepath"
+	"github.com/mijia/adoc"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -18,6 +19,8 @@ const (
 
 type K8sCluster struct {
 	*kubernetes.Clientset
+
+	*adoc.DockerClient
 }
 
 // GetResources get node info
@@ -33,6 +36,7 @@ func (c *K8sCluster) CreatePodGroup(spec model.PodGroupSpec) (model.PodGroup, er
 	// 1. init podctls, podgroup
 	// 2. use podctl deploy instance
 	// 3. assemble podgroup
+	CreateDeployment(c, spec)
 	return model.PodGroup{}, nil
 }
 
@@ -46,8 +50,8 @@ func (c *K8sCluster) PatchPodGroup(spec model.PodGroupSpec) (model.PodGroup, err
 
 func NewCluster(addr string, timeout, rwTimeout time.Duration, debug ...bool) (cluster.Cluster, error) {
 	home := homeDir()
-	kubeconfig = filepath.Join(home, ".kube", "config")
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	kubeconfig := filepath.Join(home, ".kube", "config")
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -59,6 +63,7 @@ func NewCluster(addr string, timeout, rwTimeout time.Duration, debug ...bool) (c
 
 	k8s := &K8sCluster{}
 	k8s.Clientset = clientset
+	k8s.DockerClient = &adoc.DockerClient{}
 	return k8s, nil
 }
 
@@ -66,4 +71,5 @@ func homeDir() string {
 	if h := os.Getenv("HOME"); h != "" {
 		return h
 	}
+	return os.Getenv("USERPROFILE") // windows
 }

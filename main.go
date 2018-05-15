@@ -23,13 +23,13 @@ const (
 )
 
 func main() {
-	var webAddr, swarmAddr, etcdAddr, advertise string
+	var webAddr, orcBackendAddr, etcdAddr, advertise string
 	var isDebug, version bool
 	var refreshInterval, dependsGCTime, maxRestartTimes, restartInfoClearInterval int
 
 	flag.StringVar(&advertise, "advertise", "", "The address advertise to other peers, this will open HA mode")
 	flag.StringVar(&webAddr, "web", ":9000", "The address which lain-deployd is listenning on")
-	flag.StringVar(&swarmAddr, "swarm", "", "The tcp://<SWRAM_IP>:<SWARM_PORT> address that Swarm master is deployed")
+	flag.StringVar(&orcBackendAddr, "swarm", "", "The tcp://<SWRAM_IP>:<SWARM_PORT> address that Swarm master is deployed")
 	flag.StringVar(&etcdAddr, "etcd", "", "The etcd cluster access points, e.g. http://127.0.0.1:4001")
 	flag.IntVar(&dependsGCTime, "dependsGCTime", 5, "The depends garbage collection time (minutes)")
 	flag.IntVar(&refreshInterval, "refreshInterval", 90, "The refresh interval time (seconds)")
@@ -44,7 +44,7 @@ func main() {
 		return
 	}
 
-	usage(swarmAddr != "", "Please provide the swarm master address!")
+	usage(orcBackendAddr != "", "Please provide the swarm master address!")
 	usage(etcdAddr != "", "Please provide the etcd access points address!")
 
 	if isDebug {
@@ -56,7 +56,7 @@ func main() {
 	engine.RestartInfoClearInterval = time.Duration(restartInfoClearInterval) * time.Minute
 	model.RestartMaxCount = maxRestartTimes
 
-	server := apiserver.New(swarmAddr, etcdAddr, isDebug)
+	server := apiserver.New(orcBackendAddr, etcdAddr, isDebug)
 
 	if advertise == "" {
 		// no advertise, running without election

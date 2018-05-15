@@ -11,15 +11,12 @@ import (
 	"github.com/laincloud/deployd/extentions/handler"
 	. "github.com/laincloud/deployd/model"
 	"github.com/laincloud/deployd/storage"
-	"github.com/mijia/adoc"
 	"github.com/mijia/sweb/log"
 )
 
 var RefreshInterval int
 
 var cstController *constraintController
-
-var ntfController *notifyController
 
 var calicoErrHandler *handler.CalicoHandler
 
@@ -141,14 +138,6 @@ func (engine *OrcEngine) NewPodGroup(spec PodGroupSpec) error {
 		return ErrPodGroupCleaning
 	}
 
-	for _, depends := range spec.Pod.Dependencies {
-		if _, ok := engine.dependsCtrls[depends.PodName]; !ok {
-			//We will allow the weak reference to the dependency pods and won't return an error
-			//FIXME: generate the alarm message or alarm data
-			log.Warnf("Engine found some missing dependency pod, %s", depends.PodName)
-		}
-	}
-
 	var pg PodGroup
 	pg.State = RunStatePending
 	pgCtrl := engine.initPodGroupCtrl(spec, nil, pg)
@@ -231,7 +220,6 @@ func (engine *OrcEngine) Start() {
 	}
 	engine.stop = make(chan struct{})
 	go engine.initOperationWorker()
-	go engine.startClusterMonitor()
 }
 
 func (engine *OrcEngine) Stop() {
@@ -337,11 +325,23 @@ func (engine *OrcEngine) initPodGroupCtrl(spec PodGroupSpec, states []PodPrevSta
 
 // This will be running inside the go routine
 func (engine *OrcEngine) initOperationWorker() {
-	tick := time.Tick(time.Duration(RefreshInterval) * time.Second)
 	for {
 		select {
 		case op := <-engine.opsChan:
 			op.Do(engine)
+		case <-engine.stop:
+			if len(engine.opsChan) == 0 {
+				return
+			}
+		}
+	}
+}
+
+// This will be running inside the go routine
+func (engine *OrcEngine) initRefreshWorker() {
+	tick := time.Tick(time.Duration(RefreshInterval) * time.Second)
+	for {
+		select {
 		case <-tick:
 			engine.RLock()
 			if len(engine.pgCtrls) > 0 {
@@ -373,10 +373,6 @@ func (engine *OrcEngine) initOperationWorker() {
 				}
 			}
 			engine.RUnlock()
-		case <-engine.stop:
-			if len(engine.opsChan) == 0 {
-				return
-			}
 		}
 	}
 }
@@ -460,64 +456,11 @@ func (engine *OrcEngine) DeleteConstraints(cstType string) error {
 	}
 }
 
-func (engine *OrcEngine) GetNotifies() []string {
-	notifies := ntfController.GetAllNotifies()
-	return ntfController.CallbackList(notifies)
-}
-
-func (engine *OrcEngine) AddNotify(callback string) error {
-	return ntfController.AddNotify(callback, engine.store)
-}
-
-func (engine *OrcEngine) DeleteNotify(callback string) error {
-	if _, ok := ntfController.GetAllNotifies()[callback]; !ok {
-		return ErrNotifyNotExists
-	} else {
-		return ntfController.RemoveNotify(callback, engine.store)
-	}
-}
-
 func (engine *OrcEngine) onClusterNodeLost(nodeName string, downCount int) {
 	log.Warnf("Cluster node is down, [%q], %s nodes down in all, will check if need stop the engine", nodeName, downCount)
 	if downCount >= maxDownNode {
 		log.Warnf("Too many cluster nodes stoped in a short period, need stop the engine")
 		engine.Stop()
-	}
-}
-
-func (engine *OrcEngine) startClusterMonitor() {
-	restart := make(chan bool)
-	downTime := time.Now()
-	downCount := 0
-	eventMonitorId := engine.cluster.MonitorEvents("", func(event adoc.Event, err error) {
-		if err != nil {
-			log.Warnf("Error during the cluster event monitor, will try to restart the monitor, %s", err)
-			restart <- true
-		} else {
-			log.Debugf("Cluster event: %+v", event)
-			if strings.HasPrefix(event.From, "swarm") {
-				switch event.Status {
-				case "engine_disconnect":
-					now := time.Now()
-					if downTime.Add(downNodeResetPeriod).Before(now) {
-						downCount = 1
-						downTime = time.Now()
-					} else {
-						downCount += 1
-					}
-					engine.onClusterNodeLost(event.Node.Name, downCount)
-				}
-			}
-		}
-	})
-	select {
-	case <-restart:
-		engine.cluster.StopMonitor(eventMonitorId)
-		close(restart)
-		time.Sleep(200 * time.Millisecond)
-		engine.startClusterMonitor()
-	case <-engine.stop:
-		engine.cluster.StopMonitor(eventMonitorId)
 	}
 }
 
@@ -534,21 +477,12 @@ func New(cluster cluster.Cluster, store storage.Store) (*OrcEngine, error) {
 	}
 
 	eagleView := NewRuntimeEagleView()
-	//if err := eagleView.Refresh(cluster); err != nil {
-	//log.Warnf("<OrcEngine> Cannot refresh all the runtime data for bootstraping, %s", err)
-	//return nil, err
-	//}
 	engine.eagleView = eagleView
 
 	calicoErrHandler = handler.NewCalicoHandler(cluster, store)
 
 	cstController = NewConstraintController()
 	if err := cstController.LoadConstraints(engine.store); err != nil {
-		return nil, err
-	}
-
-	ntfController = NewNotifyController(engine.stop)
-	if err := ntfController.LoadNotifies(engine.store); err != nil {
 		return nil, err
 	}
 
