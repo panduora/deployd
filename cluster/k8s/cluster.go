@@ -1,7 +1,6 @@
 package k8s
 
 import (
-	"os"
 	"path/filepath"
 	"time"
 
@@ -40,6 +39,10 @@ func (c *K8sCluster) CreatePodGroup(spec model.PodGroupSpec) (model.PodGroup, er
 	return model.PodGroup{}, nil
 }
 
+func (c *K8sCluster) RemovePodGroup(spec model.PodGroupSpec) error {
+	return RemoveDeployment(c, spec)
+}
+
 func (c *K8sCluster) InspectPodGroup(spec model.PodGroupSpec) (model.PodGroup, error) {
 	return model.PodGroup{}, nil
 }
@@ -49,8 +52,8 @@ func (c *K8sCluster) PatchPodGroup(spec model.PodGroupSpec) (model.PodGroup, err
 }
 
 func NewCluster(addr string, timeout, rwTimeout time.Duration, debug ...bool) (cluster.Cluster, error) {
-	home := homeDir()
-	kubeconfig := filepath.Join(home, ".kube", "config")
+	// FIXME: get dir from os env
+	kubeconfig := filepath.Join("/root", ".kube", "config")
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		panic(err.Error())
@@ -65,11 +68,4 @@ func NewCluster(addr string, timeout, rwTimeout time.Duration, debug ...bool) (c
 	k8s.Clientset = clientset
 	k8s.DockerClient = &adoc.DockerClient{}
 	return k8s, nil
-}
-
-func homeDir() string {
-	if h := os.Getenv("HOME"); h != "" {
-		return h
-	}
-	return os.Getenv("USERPROFILE") // windows
 }

@@ -262,6 +262,7 @@ func (op pgOperDeploy) Do(pgCtrl *podGroupController, c cluster.Cluster, store s
 		log.Infof("%s deploy instance, op=%+v, runtime=%+v, duration=%s", pgCtrl, op, runtime, time.Now().Sub(start))
 		pgCtrl.RUnlock()
 	}()
+	c.CreatePodGroup(pgCtrl.spec)
 	return false
 }
 
@@ -409,6 +410,26 @@ func (op pgOperRemoveInstance) Do(pgCtrl *podGroupController, c cluster.Cluster,
 	nodeName := podCtrl.pod.NodeName()
 	podCtrl.Remove(c)
 	pgCtrl.emitChangeEvent("remove", podCtrl.spec, podCtrl.pod, nodeName)
+	return false
+}
+
+type pgOperRemove struct {
+}
+
+func (op pgOperRemove) Do(pgCtrl *podGroupController, c cluster.Cluster, store storage.Store, ev *RuntimeEagleView) bool {
+	start := time.Now()
+	defer func() {
+		pgCtrl.RLock()
+		log.Infof("%s remove pg, duration=%s", pgCtrl, time.Now().Sub(start))
+		pgCtrl.RUnlock()
+	}()
+
+	c.RemovePodGroup(pgCtrl.spec)
+
+	//podCtrl := pgCtrl.podCtrls[op.instanceNo-1]
+	//nodeName := podCtrl.pod.NodeName()
+	//podCtrl.Remove(c)
+	//pgCtrl.emitChangeEvent("remove", podCtrl.spec, podCtrl.pod, nodeName)
 	return false
 }
 

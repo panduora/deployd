@@ -86,7 +86,7 @@ func (e *Elector) watch(leaderCh chan string, stop chan struct{}) {
 
 		for kv := range ch {
 			value := string(kv.Value)
-			log.Debugf("Get watch event, leader value changed to %s", value)
+			//log.Debugf("Get watch event, leader value changed to %s", value)
 			if current != value && value != "" {
 				current = value
 				leaderCh <- value

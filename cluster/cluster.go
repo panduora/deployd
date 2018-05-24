@@ -29,6 +29,7 @@ type Cluster interface {
 	// new APIs for k8s
 	ListPodGroups(showAll bool, filters ...string) ([]model.PodGroup, error)
 	CreatePodGroup(spec model.PodGroupSpec) (model.PodGroup, error)
+	RemovePodGroup(spec model.PodGroupSpec) error
 	InspectPodGroup(spec model.PodGroupSpec) (model.PodGroup, error)
 	PatchPodGroup(spec model.PodGroupSpec) (model.PodGroup, error)
 

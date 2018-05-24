@@ -1,7 +1,8 @@
 package k8s
 
 import (
-	"fmt"
+	"strings"
+
 	"github.com/laincloud/deployd/model"
 	"github.com/mijia/sweb/log"
 
@@ -12,7 +13,6 @@ import (
 
 func CreateDeployment(cluster *K8sCluster, pgs model.PodGroupSpec) {
 	// Create Deployment
-	fmt.Println("Creating deployment...")
 	log.Infof("Creating deployment...%s ", pgs)
 	deploymentsClient := cluster.Clientset.AppsV1beta1().Deployments(apiv1.NamespaceDefault)
 	deployment := RenderDeployment(pgs)
@@ -20,14 +20,24 @@ func CreateDeployment(cluster *K8sCluster, pgs model.PodGroupSpec) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Created deployment %q.\n", result.GetObjectMeta().GetName())
 	log.Infof("Created deployment %q.\n", result.GetObjectMeta().GetName())
+}
+
+func RemoveDeployment(cluster *K8sCluster, pgs model.PodGroupSpec) error {
+	// Create Deployment
+	log.Infof("Removing deployment...%s ", pgs)
+	deploymentsClient := cluster.Clientset.AppsV1beta1().Deployments(apiv1.NamespaceDefault)
+	deletePolicy := metav1.DeletePropagationBackground
+	pgName := strings.Replace(pgs.Name, ".", "-", -1)
+	return deploymentsClient.Delete(pgName, &metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	})
 }
 
 func RenderDeployment(pgs model.PodGroupSpec) *appsv1beta1.Deployment {
 	return &appsv1beta1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: pgs.Name,
+			Name: strings.Replace(pgs.Name, ".", "-", -1),
 		},
 		Spec: appsv1beta1.DeploymentSpec{
 			Replicas: int32Ptr(int32(pgs.NumInstances)),
@@ -43,7 +53,7 @@ func RenderPodMetaData(ps model.PodSpec) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Labels: map[string]string{
 			"app":      ps.Namespace,
-			"proc":     ps.Name,
+			"proc":     strings.Replace(ps.Name, ".", "-", -1),
 			"deployer": "LAIN",
 		},
 	}
@@ -61,7 +71,7 @@ func RenderPodContainers(ps model.PodSpec) []apiv1.Container {
 
 	for _, c := range ps.Containers {
 		containers = append(containers, apiv1.Container{
-			Name:         ps.Name,
+			Name:         strings.Replace(ps.Name, ".", "-", -1),
 			Image:        c.Image,
 			Ports:        RenderContainerPort(c),
 			VolumeMounts: []apiv1.VolumeMount{},

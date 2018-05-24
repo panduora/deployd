@@ -24,7 +24,7 @@ const (
 
 func main() {
 	var webAddr, orcBackendAddr, etcdAddr, advertise string
-	var isDebug, version bool
+	var isDebug bool
 	var refreshInterval, dependsGCTime, maxRestartTimes, restartInfoClearInterval int
 
 	flag.StringVar(&advertise, "advertise", "", "The address advertise to other peers, this will open HA mode")
@@ -36,13 +36,7 @@ func main() {
 	flag.IntVar(&maxRestartTimes, "maxRestartTimes", 3, "The max restart times for pod")
 	flag.IntVar(&restartInfoClearInterval, "restartInfoClearInterval", 30, "The interval to clear restart info (minutes)")
 	flag.BoolVar(&isDebug, "debug", false, "Debug mode switch")
-	flag.BoolVar(&version, "v", false, "Show version")
 	flag.Parse()
-
-	if version {
-		println("deployd", VERSION)
-		return
-	}
 
 	usage(orcBackendAddr != "", "Please provide the swarm master address!")
 	usage(etcdAddr != "", "Please provide the etcd access points address!")

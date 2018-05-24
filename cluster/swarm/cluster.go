@@ -44,6 +44,10 @@ func (c *SwarmCluster) CreatePodGroup(spec model.PodGroupSpec) (model.PodGroup, 
 	return model.PodGroup{}, nil
 }
 
+func (c *SwarmCluster) RemovePodGroup(spec model.PodGroupSpec) error {
+	return nil
+}
+
 func (c *SwarmCluster) InspectPodGroup(spec model.PodGroupSpec) (model.PodGroup, error) {
 	return model.PodGroup{}, nil
 }

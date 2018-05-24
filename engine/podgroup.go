@@ -182,18 +182,19 @@ func (pgCtrl *podGroupController) RescheduleDrift(fromNode, toNode string, insta
 }
 
 func (pgCtrl *podGroupController) Remove() {
-	pgCtrl.RLock()
-	spec := pgCtrl.spec.Clone()
-	pgCtrl.RUnlock()
+	//pgCtrl.RLock()
+	//spec := pgCtrl.spec.Clone()
+	//pgCtrl.RUnlock()
 
 	pgCtrl.opsChan <- pgOperLogOperation{"Start to remove"}
-	pgCtrl.opsChan <- pgOperRemoveStore{}
-	for i := 0; i < spec.NumInstances; i += 1 {
-		pgCtrl.opsChan <- pgOperRemoveInstance{i + 1, spec.Pod}
-	}
+	//pgCtrl.opsChan <- pgOperRemoveStore{}
+	//for i := 0; i < spec.NumInstances; i += 1 {
+	//pgCtrl.opsChan <- pgOperRemoveInstance{i + 1, spec.Pod}
+	//}
+	pgCtrl.opsChan <- pgOperRemove{}
 	pgCtrl.opsChan <- pgOperLogOperation{"Remove finished"}
-	pgCtrl.opsChan <- pgOperSnapshotEagleView{spec.Name}
-	pgCtrl.opsChan <- pgOperPurge{}
+	//pgCtrl.opsChan <- pgOperSnapshotEagleView{spec.Name}
+	//pgCtrl.opsChan <- pgOperPurge{}
 }
 
 func (pgCtrl *podGroupController) Refresh(force bool) {
