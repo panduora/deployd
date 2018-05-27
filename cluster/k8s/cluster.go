@@ -35,12 +35,14 @@ func (c *K8sCluster) CreatePodGroup(spec model.PodGroupSpec) (model.PodGroup, er
 	// 1. init podctls, podgroup
 	// 2. use podctl deploy instance
 	// 3. assemble podgroup
-	CreateDeployment(c, spec)
+	workload := NewWorkload(c, spec, "")
+	workload.Create(spec)
 	return model.PodGroup{}, nil
 }
 
 func (c *K8sCluster) RemovePodGroup(spec model.PodGroupSpec) error {
-	return RemoveDeployment(c, spec)
+	workload := NewWorkload(c, spec, "")
+	return workload.Remove(spec)
 }
 
 func (c *K8sCluster) InspectPodGroup(spec model.PodGroupSpec) (model.PodGroup, error) {

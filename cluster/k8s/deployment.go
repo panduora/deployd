@@ -9,93 +9,70 @@ import (
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	operator "k8s.io/client-go/kubernetes/typed/apps/v1beta1"
 )
 
-func CreateDeployment(cluster *K8sCluster, pgs model.PodGroupSpec) {
-	// Create Deployment
-	log.Infof("Creating deployment...%s ", pgs)
-	deploymentsClient := cluster.Clientset.AppsV1beta1().Deployments(apiv1.NamespaceDefault)
-	deployment := RenderDeployment(pgs)
-	result, err := deploymentsClient.Create(deployment)
-	if err != nil {
-		panic(err)
+type K8sDeploymentCtrl struct {
+	client     operator.DeploymentInterface
+	deployment *appsv1beta1.Deployment
+
+	podCtrl *K8sPodCtrl
+}
+
+func NewK8sDeployment(cluster *K8sCluster, namespace string) *K8sDeploymentCtrl {
+	if namespace == "" {
+		namespace = apiv1.NamespaceDefault
 	}
-	log.Infof("Created deployment %q.\n", result.GetObjectMeta().GetName())
+	return &K8sDeploymentCtrl{
+		client:  cluster.Clientset.AppsV1beta1().Deployments(namespace),
+		podCtrl: NewK8sPod(cluster, namespace),
+	}
 }
 
-func RemoveDeployment(cluster *K8sCluster, pgs model.PodGroupSpec) error {
-	// Create Deployment
-	log.Infof("Removing deployment...%s ", pgs)
-	deploymentsClient := cluster.Clientset.AppsV1beta1().Deployments(apiv1.NamespaceDefault)
-	deletePolicy := metav1.DeletePropagationBackground
-	pgName := strings.Replace(pgs.Name, ".", "-", -1)
-	return deploymentsClient.Delete(pgName, &metav1.DeleteOptions{
-		PropagationPolicy: &deletePolicy,
-	})
-}
-
-func RenderDeployment(pgs model.PodGroupSpec) *appsv1beta1.Deployment {
-	return &appsv1beta1.Deployment{
+func (d *K8sDeploymentCtrl) Render(pgs model.PodGroupSpec) error {
+	d.deployment = &appsv1beta1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: strings.Replace(pgs.Name, ".", "-", -1),
 		},
 		Spec: appsv1beta1.DeploymentSpec{
 			Replicas: int32Ptr(int32(pgs.NumInstances)),
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: RenderPodMetaData(pgs.Pod),
-				Spec:       RenderPodSpec(pgs.Pod),
-			},
+			Template: d.podCtrl.Render(pgs),
 		},
 	}
+
+	return nil
 }
 
-func RenderPodMetaData(ps model.PodSpec) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Labels: map[string]string{
-			"app":      ps.Namespace,
-			"proc":     strings.Replace(ps.Name, ".", "-", -1),
-			"deployer": "LAIN",
-		},
+func (d *K8sDeploymentCtrl) Create(pgs model.PodGroupSpec) error {
+	log.Infof("Creating deployment...%q", pgs)
+	d.Render(pgs)
+	result, err := d.client.Create(d.deployment)
+	log.Infof("Created deployment %q.\n", result.GetObjectMeta().GetName())
+	return err
+}
+
+func (d *K8sDeploymentCtrl) Remove(pgs model.PodGroupSpec) error {
+	// FIXME: need scale down replica then remove deployment
+	log.Infof("Remving deployment...%q", pgs)
+	deletePolicy := metav1.DeletePropagationForeground
+	pgName := strings.Replace(pgs.Name, ".", "-", -1)
+	return d.client.Delete(pgName, &metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	})
+}
+
+func (d *K8sDeploymentCtrl) Inspect(pgs model.PodGroupSpec) error {
+	// FIXME: need scale down replica then remove deployment
+	log.Infof("Inspecting deployment...%q", pgs)
+
+	podList := d.podCtrl.Inspect(pgs)
+	for _, p := range podList.Items {
+		log.Infof("Pod %q", p.Name)
+		log.Infof("Pod host IP of status %q", p.Status.HostIP)
+		log.Infof("Pod status %q", p.Status)
 	}
-}
 
-func RenderPodSpec(ps model.PodSpec) apiv1.PodSpec {
-	return apiv1.PodSpec{
-		Containers: RenderPodContainers(ps),
-		Volumes:    RenderPodVolumes(ps),
-	}
-}
-
-func RenderPodContainers(ps model.PodSpec) []apiv1.Container {
-	var containers []apiv1.Container
-
-	for _, c := range ps.Containers {
-		containers = append(containers, apiv1.Container{
-			Name:         strings.Replace(ps.Name, ".", "-", -1),
-			Image:        c.Image,
-			Ports:        RenderContainerPort(c),
-			VolumeMounts: []apiv1.VolumeMount{},
-		})
-	}
-	return containers
-}
-
-func RenderContainerPort(cs model.ContainerSpec) []apiv1.ContainerPort {
-	if cs.Expose > 0 {
-		return []apiv1.ContainerPort{
-			{
-				Name:          "http",
-				Protocol:      apiv1.ProtocolTCP,
-				ContainerPort: int32(cs.Expose),
-			},
-		}
-	} else {
-		return []apiv1.ContainerPort{}
-	}
-}
-
-func RenderPodVolumes(ps model.PodSpec) []apiv1.Volume {
-	return []apiv1.Volume{}
+	return nil
 }
 
 func int32Ptr(i int32) *int32 { return &i }
