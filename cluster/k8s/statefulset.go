@@ -62,7 +62,7 @@ func (d *K8sStatefulSetCtrl) Remove(pgs model.PodGroupSpec) error {
 	})
 }
 
-func (d *K8sStatefulSetCtrl) Inspect(pgs model.PodGroupSpec) error {
+func (d *K8sStatefulSetCtrl) Inspect(pgs model.PodGroupSpec) model.PodGroup {
 	// FIXME: need scale down replica then remove Statefulset
 	log.Infof("Inspecting Statefulset...%q", pgs)
 
@@ -73,5 +73,5 @@ func (d *K8sStatefulSetCtrl) Inspect(pgs model.PodGroupSpec) error {
 		log.Infof("Pod status %q", p.Status)
 	}
 
-	return nil
+	return model.PodGroup{}
 }

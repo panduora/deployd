@@ -8,7 +8,7 @@ type K8sWorkloadCtrl interface {
 	Render(pgs model.PodGroupSpec) error
 	Create(pgs model.PodGroupSpec) error
 	Remove(pgs model.PodGroupSpec) error
-	Inspect(pgs model.PodGroupSpec) error
+	Inspect(pgs model.PodGroupSpec) model.PodGroup
 }
 
 func NewWorkload(cluster *K8sCluster, spec model.PodGroupSpec, namespace string) K8sWorkloadCtrl {

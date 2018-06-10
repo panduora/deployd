@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/laincloud/deployd/model"
+	"github.com/mijia/adoc"
 	"github.com/mijia/sweb/log"
 
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
@@ -61,18 +62,39 @@ func (d *K8sDeploymentCtrl) Remove(pgs model.PodGroupSpec) error {
 	})
 }
 
-func (d *K8sDeploymentCtrl) Inspect(pgs model.PodGroupSpec) error {
-	// FIXME: need scale down replica then remove deployment
+func (d *K8sDeploymentCtrl) Inspect(pgs model.PodGroupSpec) model.PodGroup {
 	log.Infof("Inspecting deployment...%q", pgs)
+	kPodList := d.podCtrl.Inspect(pgs)
 
-	podList := d.podCtrl.Inspect(pgs)
-	for _, p := range podList.Items {
-		log.Infof("Pod %q", p.Name)
-		log.Infof("Pod host IP of status %q", p.Status.HostIP)
-		log.Infof("Pod status %q", p.Status)
+	pg := model.PodGroup{}
+	pg.State = model.RunStateSuccess
+	pg.LastError = ""
+	pg.Pods = make([]model.Pod, pgs.NumInstances)
+
+	for i := range pg.Pods {
+		kPod := kPodList.Items[i]
+		pod := model.Pod{}
+		pod.InstanceNo = i + 1
+		containers := make([]model.Container, len(kPod.Status.ContainerStatuses))
+
+		for j := range containers {
+			container := model.Container{}
+			container.ContainerIp = kPod.Status.PodIP
+			container.NodeIp = kPod.Status.HostIP
+			container.Id = kPod.Status.ContainerStatuses[j].ContainerID
+			container.NodeName = kPod.Spec.NodeName
+			container.Runtime = adoc.ContainerDetail{
+				Id:    kPod.Status.ContainerStatuses[j].ContainerID,
+				Image: kPod.Spec.Containers[j].Image,
+			}
+			containers[j] = container
+		}
+		pod.Containers = containers
+
+		pg.Pods[i] = pod
 	}
 
-	return nil
+	return pg
 }
 
 func int32Ptr(i int32) *int32 { return &i }

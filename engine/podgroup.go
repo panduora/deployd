@@ -198,23 +198,16 @@ func (pgCtrl *podGroupController) Remove() {
 }
 
 func (pgCtrl *podGroupController) Refresh(force bool) {
-	if pgCtrl.IsRemoved() || pgCtrl.IsPending() {
-		return
-	}
 
 	pgCtrl.RLock()
 	spec := pgCtrl.spec.Clone()
 	pgCtrl.RUnlock()
 
 	pgCtrl.opsChan <- pgOperLogOperation{"Start to refresh PodGroup"}
-	pgCtrl.opsChan <- pgOperSnapshotEagleView{spec.Name}
-	for i := 0; i < spec.NumInstances; i += 1 {
-		pgCtrl.opsChan <- pgOperRefreshInstance{i + 1, spec}
-	}
-	pgCtrl.opsChan <- pgOperVerifyInstanceCount{spec}
-	pgCtrl.opsChan <- pgOperSnapshotGroup{force}
-	pgCtrl.opsChan <- pgOperSnapshotPrevState{}
-	pgCtrl.opsChan <- pgOperSaveStore{false}
+	//pgCtrl.opsChan <- pgOperSnapshotEagleView{spec.Name}
+	pgCtrl.opsChan <- pgOperRefresh{spec}
+	//pgCtrl.opsChan <- pgOperSnapshotGroup{force}
+	//pgCtrl.opsChan <- pgOperSaveStore{false}
 	pgCtrl.opsChan <- pgOperLogOperation{"PodGroup refreshing finished"}
 }
 

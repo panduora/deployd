@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/laincloud/deployd/model"
@@ -24,7 +25,11 @@ func NewK8sPod(cluster *K8sCluster, namespace string) *K8sPodCtrl {
 }
 
 func (p *K8sPodCtrl) Inspect(pgs model.PodGroupSpec) *apiv1.PodList {
-	podList, _ := p.client.List(metav1.ListOptions{LabelSelector: "app=console,deployer=LAIN"})
+	labelSelector := fmt.Sprintf(
+		"deployer=LAIN,app=%s,proc=%s", pgs.Namespace, strings.Replace(
+			pgs.Name, ".", "-", -1))
+	podList, _ := p.client.List(metav1.ListOptions{
+		LabelSelector: labelSelector})
 	return podList
 }
 

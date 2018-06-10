@@ -118,6 +118,25 @@ func (op pgOperUpgradeInstance) Do(pgCtrl *podGroupController, c cluster.Cluster
 	return false
 }
 
+type pgOperRefresh struct {
+	spec PodGroupSpec
+}
+
+func (op pgOperRefresh) Do(pgCtrl *podGroupController, c cluster.Cluster, store storage.Store, ev *RuntimeEagleView) bool {
+	var runtime ImRuntime
+	start := time.Now()
+	defer func() {
+		pgCtrl.RLock()
+		log.Infof("%s refresh instance, runtime=%+v, duration=%s", pgCtrl, runtime, time.Now().Sub(start))
+		pgCtrl.RUnlock()
+	}()
+
+	pg, _ := c.InspectPodGroup(pgCtrl.spec)
+	pgCtrl.group = pg
+
+	return false
+}
+
 type pgOperRefreshInstance struct {
 	instanceNo int
 	spec       PodGroupSpec

@@ -46,7 +46,8 @@ func (c *K8sCluster) RemovePodGroup(spec model.PodGroupSpec) error {
 }
 
 func (c *K8sCluster) InspectPodGroup(spec model.PodGroupSpec) (model.PodGroup, error) {
-	return model.PodGroup{}, nil
+	workload := NewWorkload(c, spec, "")
+	return workload.Inspect(spec), nil
 }
 
 func (c *K8sCluster) PatchPodGroup(spec model.PodGroupSpec) (model.PodGroup, error) {
