@@ -81,6 +81,22 @@ func (op pgOperSnapshotEagleView) Do(pgCtrl *podGroupController, c cluster.Clust
 	return false
 }
 
+type pgOperUpgrade struct {
+	version int
+}
+
+func (op pgOperUpgrade) Do(pgCtrl *podGroupController, c cluster.Cluster, store storage.Store, ev *RuntimeEagleView) bool {
+	start := time.Now()
+	defer func() {
+		pgCtrl.RLock()
+		log.Infof("%s upgrade instance, version=%d, duration=%s", pgCtrl, op.version, time.Now().Sub(start))
+		pgCtrl.RUnlock()
+	}()
+
+	c.PatchPodGroup(pgCtrl.spec)
+	return false
+}
+
 type pgOperUpgradeInstance struct {
 	instanceNo int
 	version    int

@@ -52,6 +52,10 @@ func (d *K8sStatefulSetCtrl) Create(pgs model.PodGroupSpec) error {
 	return err
 }
 
+func (d *K8sStatefulSetCtrl) Upgrade(pgs model.PodGroupSpec) error {
+	return nil
+}
+
 func (d *K8sStatefulSetCtrl) Remove(pgs model.PodGroupSpec) error {
 	// FIXME: need scale down replica then remove Statefulset
 	log.Infof("Remving Statefulset...%q", pgs)

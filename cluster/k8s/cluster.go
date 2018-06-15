@@ -51,7 +51,8 @@ func (c *K8sCluster) InspectPodGroup(spec model.PodGroupSpec) (model.PodGroup, e
 }
 
 func (c *K8sCluster) PatchPodGroup(spec model.PodGroupSpec) (model.PodGroup, error) {
-	return model.PodGroup{}, nil
+	workload := NewWorkload(c, spec, "")
+	return model.PodGroup{}, workload.Upgrade(spec)
 }
 
 func NewCluster(addr string, timeout, rwTimeout time.Duration, debug ...bool) (cluster.Cluster, error) {

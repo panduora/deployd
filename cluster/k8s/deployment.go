@@ -52,6 +52,19 @@ func (d *K8sDeploymentCtrl) Create(pgs model.PodGroupSpec) error {
 	return err
 }
 
+func (d *K8sDeploymentCtrl) Upgrade(pgs model.PodGroupSpec) error {
+	log.Infof("Upgrading deployment...%q", pgs)
+	name := strings.Replace(pgs.Name, ".", "-", -1)
+	result, err := d.client.Get(name, metav1.GetOptions{})
+	log.Infof("Origin deployment %s.\n", result)
+	d.Render(pgs)
+	result.Spec = d.deployment.Spec
+	log.Infof("Patched deployment %s.\n", result)
+	_, updateErr := d.client.Update(result)
+	log.Infof("Upgrading deployment %q.\n", updateErr)
+	return err
+}
+
 func (d *K8sDeploymentCtrl) Remove(pgs model.PodGroupSpec) error {
 	// FIXME: need scale down replica then remove deployment
 	log.Infof("Remving deployment...%q", pgs)

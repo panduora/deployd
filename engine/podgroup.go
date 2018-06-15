@@ -106,22 +106,17 @@ func (pgCtrl *podGroupController) RescheduleInstance(numInstances int, restartPo
 	pgCtrl.opsChan <- pgOperSaveStore{true}
 	delta := numInstances - curNumInstances
 	if delta != 0 {
-		pgCtrl.opsChan <- pgOperSnapshotEagleView{spec.Name}
 		if delta > 0 {
 			for i := 0; i < delta; i += 1 {
-				instanceNo := i + 1 + curNumInstances
 				pgCtrl.opsChan <- pgOperPushPodCtrl{spec.Pod}
-				pgCtrl.opsChan <- pgOperDeployInstance{instanceNo, spec.Version}
 			}
 		} else {
 			delta *= -1
 			for i := 0; i < delta; i += 1 {
-				pgCtrl.opsChan <- pgOperRemoveInstance{curNumInstances - i, spec.Pod}
 				pgCtrl.opsChan <- pgOperPopPodCtrl{}
 			}
 		}
-		pgCtrl.opsChan <- pgOperSnapshotGroup{true}
-		pgCtrl.opsChan <- pgOperSnapshotPrevState{}
+		pgCtrl.opsChan <- pgOperUpgrade{spec.Version}
 		pgCtrl.opsChan <- pgOperSaveStore{true}
 	}
 	pgCtrl.opsChan <- pgOperLogOperation{"Reschedule instance number finished"}
@@ -136,24 +131,16 @@ func (pgCtrl *podGroupController) RescheduleSpec(podSpec PodSpec) {
 		return
 	}
 
-	oldPodSpec := spec.Pod.Clone()
 	spec.Pod = spec.Pod.Merge(podSpec)
 	spec.Version += 1
 	spec.UpdatedAt = time.Now()
 	pgCtrl.Lock()
 	pgCtrl.spec = spec
 	pgCtrl.Unlock()
+
 	pgCtrl.opsChan <- pgOperLogOperation{"Start to reschedule spec"}
 	pgCtrl.opsChan <- pgOperSaveStore{true}
-	pgCtrl.opsChan <- pgOperSnapshotEagleView{spec.Name}
-
-	for i := 0; i < spec.NumInstances; i += 1 {
-		pgCtrl.opsChan <- pgOperUpgradeInstance{i + 1, spec.Version, oldPodSpec, spec.Pod}
-		// wait some seconds for new instance's initialization completed, before we update next one
-		time.Sleep(time.Second * time.Duration(podSpec.GetSetupTime()))
-	}
-	pgCtrl.opsChan <- pgOperSnapshotGroup{true}
-	pgCtrl.opsChan <- pgOperSnapshotPrevState{}
+	pgCtrl.opsChan <- pgOperUpgrade{spec.Version}
 	pgCtrl.opsChan <- pgOperSaveStore{true}
 	pgCtrl.opsChan <- pgOperLogOperation{"Reschedule spec finished"}
 }
@@ -204,10 +191,8 @@ func (pgCtrl *podGroupController) Refresh(force bool) {
 	pgCtrl.RUnlock()
 
 	pgCtrl.opsChan <- pgOperLogOperation{"Start to refresh PodGroup"}
-	//pgCtrl.opsChan <- pgOperSnapshotEagleView{spec.Name}
 	pgCtrl.opsChan <- pgOperRefresh{spec}
-	//pgCtrl.opsChan <- pgOperSnapshotGroup{force}
-	//pgCtrl.opsChan <- pgOperSaveStore{false}
+	pgCtrl.opsChan <- pgOperSaveStore{false}
 	pgCtrl.opsChan <- pgOperLogOperation{"PodGroup refreshing finished"}
 }
 

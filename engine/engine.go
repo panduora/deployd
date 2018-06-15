@@ -220,6 +220,7 @@ func (engine *OrcEngine) Start() {
 	}
 	engine.stop = make(chan struct{})
 	go engine.initOperationWorker()
+	go engine.initRefreshWorker()
 }
 
 func (engine *OrcEngine) Stop() {
