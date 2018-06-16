@@ -7,6 +7,7 @@ import (
 	"github.com/laincloud/deployd/model"
 
 	apiv1 "k8s.io/api/core/v1"
+	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	operator "k8s.io/client-go/kubernetes/typed/core/v1"
 )
@@ -45,6 +46,7 @@ func (p *K8sPodCtrl) RenderPodTemplate(pgs model.PodGroupSpec) apiv1.PodTemplate
 }
 
 func (p *K8sPodCtrl) RenderPodMetaData(ps model.PodSpec) metav1.ObjectMeta {
+	// TODO: add the version info
 	return metav1.ObjectMeta{
 		Labels: map[string]string{
 			"app":      ps.Namespace,
@@ -70,6 +72,7 @@ func (p *K8sPodCtrl) RenderPodContainers(ps model.PodSpec) []apiv1.Container {
 			Image:        c.Image,
 			Ports:        p.RenderContainerPort(c),
 			Command:      c.Command,
+			Resources:    p.RenderContainerResouces(c),
 			VolumeMounts: []apiv1.VolumeMount{},
 		})
 	}
@@ -80,7 +83,6 @@ func (p *K8sPodCtrl) RenderContainerPort(cs model.ContainerSpec) []apiv1.Contain
 	if cs.Expose > 0 {
 		return []apiv1.ContainerPort{
 			{
-				Name:          "http",
 				Protocol:      apiv1.ProtocolTCP,
 				ContainerPort: int32(cs.Expose),
 			},
@@ -90,6 +92,21 @@ func (p *K8sPodCtrl) RenderContainerPort(cs model.ContainerSpec) []apiv1.Contain
 	}
 }
 
+func (p *K8sPodCtrl) RenderContainerResouces(cs model.ContainerSpec) apiv1.ResourceRequirements {
+	// TODO: support cpu limits
+	return apiv1.ResourceRequirements{
+		Limits: apiv1.ResourceList{
+			"memory": *resource.NewQuantity(
+				cs.MemoryLimit, resource.BinarySI,
+			),
+		},
+		Requests: apiv1.ResourceList{
+			"memory": *resource.NewQuantity(
+				cs.MemoryLimit, resource.BinarySI,
+			),
+		},
+	}
+}
 func (p *K8sPodCtrl) RenderPodVolumes(ps model.PodSpec) []apiv1.Volume {
 	return []apiv1.Volume{}
 }

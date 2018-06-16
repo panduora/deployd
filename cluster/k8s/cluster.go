@@ -32,9 +32,6 @@ func (c *K8sCluster) ListPodGroups(showAll bool, filters ...string) ([]model.Pod
 }
 
 func (c *K8sCluster) CreatePodGroup(spec model.PodGroupSpec) (model.PodGroup, error) {
-	// 1. init podctls, podgroup
-	// 2. use podctl deploy instance
-	// 3. assemble podgroup
 	workload := NewWorkload(c, spec, "")
 	workload.Create(spec)
 	return model.PodGroup{}, nil
