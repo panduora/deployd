@@ -72,6 +72,7 @@ func (p *K8sPodCtrl) RenderPodContainers(ps model.PodSpec) []apiv1.Container {
 			Image:        c.Image,
 			Ports:        p.RenderContainerPort(c),
 			Command:      c.Command,
+			Env:          p.RenderContainerEnv(c),
 			Resources:    p.RenderContainerResouces(c),
 			VolumeMounts: []apiv1.VolumeMount{},
 		})
@@ -90,6 +91,21 @@ func (p *K8sPodCtrl) RenderContainerPort(cs model.ContainerSpec) []apiv1.Contain
 	} else {
 		return []apiv1.ContainerPort{}
 	}
+}
+
+func (p *K8sPodCtrl) RenderContainerEnv(cs model.ContainerSpec) []apiv1.EnvVar {
+
+	envs := make([]apiv1.EnvVar, len(cs.Env))
+
+	for i := range envs {
+		kv := strings.Split(cs.Env[i], "=")
+		envs[i] = apiv1.EnvVar{
+			Name:  kv[0],
+			Value: kv[1],
+		}
+	}
+
+	return envs
 }
 
 func (p *K8sPodCtrl) RenderContainerResouces(cs model.ContainerSpec) apiv1.ResourceRequirements {
