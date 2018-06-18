@@ -96,9 +96,15 @@ func (d *K8sDeploymentCtrl) Inspect(pgs model.PodGroupSpec) model.PodGroup {
 			container.NodeIp = kPod.Status.HostIP
 			container.Id = kPod.Status.ContainerStatuses[j].ContainerID
 			container.NodeName = kPod.Spec.NodeName
+			// FIXME: replace adoc container info with k8s related info
 			container.Runtime = adoc.ContainerDetail{
 				Id:    kPod.Status.ContainerStatuses[j].ContainerID,
 				Image: kPod.Spec.Containers[j].Image,
+				State: adoc.ContainerState{
+					Running:   true,
+					StartedAt: kPod.Status.StartTime.Time,
+				},
+				Name: kPod.Name,
 			}
 			containers[j] = container
 		}

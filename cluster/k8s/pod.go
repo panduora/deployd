@@ -80,6 +80,10 @@ func (p *K8sPodCtrl) RenderPodContainers(ps model.PodSpec) []apiv1.Container {
 	return containers
 }
 
+func (p *K8sPodCtrl) RenderPodVolumes(ps model.PodSpec) []apiv1.Volume {
+	return []apiv1.Volume{}
+}
+
 func (p *K8sPodCtrl) RenderContainerPort(cs model.ContainerSpec) []apiv1.ContainerPort {
 	if cs.Expose > 0 {
 		return []apiv1.ContainerPort{
@@ -122,7 +126,4 @@ func (p *K8sPodCtrl) RenderContainerResouces(cs model.ContainerSpec) apiv1.Resou
 			),
 		},
 	}
-}
-func (p *K8sPodCtrl) RenderPodVolumes(ps model.PodSpec) []apiv1.Volume {
-	return []apiv1.Volume{}
 }
