@@ -93,7 +93,8 @@ func (op pgOperUpgrade) Do(pgCtrl *podGroupController, c cluster.Cluster, store 
 		pgCtrl.RUnlock()
 	}()
 
-	c.PatchPodGroup(pgCtrl.spec)
+	pg, _ := c.PatchPodGroup(pgCtrl.spec)
+	pgCtrl.group = pg
 	return false
 }
 
@@ -297,7 +298,10 @@ func (op pgOperDeploy) Do(pgCtrl *podGroupController, c cluster.Cluster, store s
 		log.Infof("%s deploy instance, op=%+v, runtime=%+v, duration=%s", pgCtrl, op, runtime, time.Now().Sub(start))
 		pgCtrl.RUnlock()
 	}()
-	c.CreatePodGroup(pgCtrl.spec)
+
+	pg, _ := c.CreatePodGroup(pgCtrl.spec)
+	pgCtrl.group = pg
+
 	return false
 }
 
@@ -461,10 +465,8 @@ func (op pgOperRemove) Do(pgCtrl *podGroupController, c cluster.Cluster, store s
 
 	c.RemovePodGroup(pgCtrl.spec)
 
-	//podCtrl := pgCtrl.podCtrls[op.instanceNo-1]
-	//nodeName := podCtrl.pod.NodeName()
-	//podCtrl.Remove(c)
-	//pgCtrl.emitChangeEvent("remove", podCtrl.spec, podCtrl.pod, nodeName)
+	pgCtrl.group.State = RunStateRemoved
+
 	return false
 }
 

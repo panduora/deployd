@@ -44,16 +44,16 @@ func (d *K8sStatefulSetCtrl) Render(pgs model.PodGroupSpec) error {
 	return nil
 }
 
-func (d *K8sStatefulSetCtrl) Create(pgs model.PodGroupSpec) error {
+func (d *K8sStatefulSetCtrl) Create(pgs model.PodGroupSpec) model.PodGroup {
 	log.Infof("Creating Statefulset...%q", pgs)
 	d.Render(pgs)
-	result, err := d.client.Create(d.statefulSet)
+	result, _ := d.client.Create(d.statefulSet)
 	log.Infof("Created Statefulset %q.\n", result.GetObjectMeta().GetName())
-	return err
+	return model.PodGroup{}
 }
 
-func (d *K8sStatefulSetCtrl) Upgrade(pgs model.PodGroupSpec) error {
-	return nil
+func (d *K8sStatefulSetCtrl) Upgrade(pgs model.PodGroupSpec) model.PodGroup {
+	return model.PodGroup{}
 }
 
 func (d *K8sStatefulSetCtrl) Remove(pgs model.PodGroupSpec) error {

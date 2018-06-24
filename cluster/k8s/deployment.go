@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"strings"
+	"time"
 
 	"github.com/laincloud/deployd/model"
 	"github.com/mijia/adoc"
@@ -44,25 +45,25 @@ func (d *K8sDeploymentCtrl) Render(pgs model.PodGroupSpec) error {
 	return nil
 }
 
-func (d *K8sDeploymentCtrl) Create(pgs model.PodGroupSpec) error {
+func (d *K8sDeploymentCtrl) Create(pgs model.PodGroupSpec) model.PodGroup {
 	log.Infof("Creating deployment...%q", pgs)
 	d.Render(pgs)
-	result, err := d.client.Create(d.deployment)
+	result, _ := d.client.Create(d.deployment)
 	log.Infof("Created deployment %q.\n", result.GetObjectMeta().GetName())
-	return err
+	return d.Watch(pgs)
 }
 
-func (d *K8sDeploymentCtrl) Upgrade(pgs model.PodGroupSpec) error {
+func (d *K8sDeploymentCtrl) Upgrade(pgs model.PodGroupSpec) model.PodGroup {
 	log.Infof("Upgrading deployment...%q", pgs)
 	name := strings.Replace(pgs.Name, ".", "-", -1)
-	result, err := d.client.Get(name, metav1.GetOptions{})
+	result, _ := d.client.Get(name, metav1.GetOptions{})
 	log.Infof("Origin deployment %s.\n", result)
 	d.Render(pgs)
 	result.Spec = d.deployment.Spec
 	log.Infof("Patched deployment %s.\n", result)
 	_, updateErr := d.client.Update(result)
 	log.Infof("Upgrading deployment %q.\n", updateErr)
-	return err
+	return d.Watch(pgs)
 }
 
 func (d *K8sDeploymentCtrl) Remove(pgs model.PodGroupSpec) error {
@@ -84,8 +85,10 @@ func (d *K8sDeploymentCtrl) Inspect(pgs model.PodGroupSpec) model.PodGroup {
 	pg.LastError = ""
 	pg.Pods = make([]model.Pod, pgs.NumInstances)
 
-	for i := range pg.Pods {
-		kPod := kPodList.Items[i]
+	for i, kPod := range kPodList.Items {
+		if i >= pgs.NumInstances {
+			break
+		}
 		pod := model.Pod{}
 		pod.InstanceNo = i + 1
 		containers := make([]model.Container, len(kPod.Status.ContainerStatuses))
@@ -114,6 +117,26 @@ func (d *K8sDeploymentCtrl) Inspect(pgs model.PodGroupSpec) model.PodGroup {
 	}
 
 	return pg
+}
+
+func (d *K8sDeploymentCtrl) Watch(pgs model.PodGroupSpec) model.PodGroup {
+	// FIXME: need more accurate watch way
+	for {
+		time.Sleep(5 * time.Second)
+
+		pg := d.Inspect(pgs)
+		validPod := 0
+		for _, pod := range pg.Pods {
+			if len(pod.Containers) > 0 {
+				validPod += 1
+			}
+		}
+
+		if validPod != pgs.NumInstances {
+			continue
+		}
+		return pg
+	}
 }
 
 func int32Ptr(i int32) *int32 { return &i }

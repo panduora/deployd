@@ -6,9 +6,9 @@ import (
 
 type K8sWorkloadCtrl interface {
 	Render(pgs model.PodGroupSpec) error
-	Create(pgs model.PodGroupSpec) error
 	Remove(pgs model.PodGroupSpec) error
-	Upgrade(pgs model.PodGroupSpec) error
+	Create(pgs model.PodGroupSpec) model.PodGroup
+	Upgrade(pgs model.PodGroupSpec) model.PodGroup
 	Inspect(pgs model.PodGroupSpec) model.PodGroup
 }
 

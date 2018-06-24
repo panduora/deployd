@@ -33,8 +33,8 @@ func (c *K8sCluster) ListPodGroups(showAll bool, filters ...string) ([]model.Pod
 
 func (c *K8sCluster) CreatePodGroup(spec model.PodGroupSpec) (model.PodGroup, error) {
 	workload := NewWorkload(c, spec, "")
-	workload.Create(spec)
-	return model.PodGroup{}, nil
+	pg := workload.Create(spec)
+	return pg, nil
 }
 
 func (c *K8sCluster) RemovePodGroup(spec model.PodGroupSpec) error {
@@ -49,7 +49,7 @@ func (c *K8sCluster) InspectPodGroup(spec model.PodGroupSpec) (model.PodGroup, e
 
 func (c *K8sCluster) PatchPodGroup(spec model.PodGroupSpec) (model.PodGroup, error) {
 	workload := NewWorkload(c, spec, "")
-	return model.PodGroup{}, workload.Upgrade(spec)
+	return workload.Upgrade(spec), nil
 }
 
 func NewCluster(addr string, timeout, rwTimeout time.Duration, debug ...bool) (cluster.Cluster, error) {
