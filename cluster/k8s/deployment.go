@@ -19,6 +19,7 @@ type K8sDeploymentCtrl struct {
 	deployment *appsv1beta1.Deployment
 
 	podCtrl *K8sPodCtrl
+	svcCtrl *K8sServiceCtrl
 }
 
 func NewK8sDeployment(cluster *K8sCluster, namespace string) *K8sDeploymentCtrl {
@@ -28,6 +29,7 @@ func NewK8sDeployment(cluster *K8sCluster, namespace string) *K8sDeploymentCtrl 
 	return &K8sDeploymentCtrl{
 		client:  cluster.Clientset.AppsV1beta1().Deployments(namespace),
 		podCtrl: NewK8sPod(cluster, namespace),
+		svcCtrl: NewK8sService(cluster, namespace),
 	}
 }
 
@@ -48,6 +50,7 @@ func (d *K8sDeploymentCtrl) Render(pgs model.PodGroupSpec) error {
 func (d *K8sDeploymentCtrl) Create(pgs model.PodGroupSpec) model.PodGroup {
 	log.Infof("Creating deployment...%q", pgs)
 	d.Render(pgs)
+	d.svcCtrl.Create(pgs)
 	result, _ := d.client.Create(d.deployment)
 	log.Infof("Created deployment %q.\n", result.GetObjectMeta().GetName())
 	return d.Watch(pgs)
@@ -61,6 +64,7 @@ func (d *K8sDeploymentCtrl) Upgrade(pgs model.PodGroupSpec) model.PodGroup {
 	d.Render(pgs)
 	result.Spec = d.deployment.Spec
 	log.Infof("Patched deployment %s.\n", result)
+	d.svcCtrl.Upgrade(pgs)
 	_, updateErr := d.client.Update(result)
 	log.Infof("Upgrading deployment %q.\n", updateErr)
 	return d.Watch(pgs)
@@ -71,6 +75,7 @@ func (d *K8sDeploymentCtrl) Remove(pgs model.PodGroupSpec) error {
 	log.Infof("Remving deployment...%q", pgs)
 	deletePolicy := metav1.DeletePropagationForeground
 	pgName := strings.Replace(pgs.Name, ".", "-", -1)
+	d.svcCtrl.Remove(pgs)
 	return d.client.Delete(pgName, &metav1.DeleteOptions{
 		PropagationPolicy: &deletePolicy,
 	})
