@@ -1,19 +1,20 @@
 package etcd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"strings"
 	"sync"
 
-	"github.com/coreos/etcd/client"
-	"golang.org/x/net/context"
 	"github.com/laincloud/deployd/storage"
+
+	client "github.com/coreos/etcd/clientv3"
 )
 
 type EtcdStore struct {
-	keysApi client.KeysAPI
+	keysApi *client.Client
 	ctx     context.Context
 
 	sync.RWMutex
@@ -21,19 +22,17 @@ type EtcdStore struct {
 }
 
 func (store *EtcdStore) Get(key string, v interface{}) error {
-	if resp, err := store.keysApi.Get(store.ctx, key, nil); err != nil {
-		if cerr, ok := err.(client.Error); ok && cerr.Code == client.ErrorCodeKeyNotFound {
-			return storage.ErrNoSuchKey
-		}
+	if resp, err := store.keysApi.Get(store.ctx, key); err != nil {
 		return err
 	} else {
-		if resp.Node == nil {
-			return fmt.Errorf("Etcd Store returns a nil node")
+		if len(resp.Kvs) == 0 {
+			return storage.ErrNoSuchKey
 		}
-		if resp.Node.Dir {
+		if len(resp.Kvs) > 1 {
 			return fmt.Errorf("Etcd Store returns this is a directory node")
 		}
-		value := resp.Node.Value
+
+		value := resp.Kvs[0].Value
 		if err := json.Unmarshal([]byte(value), v); err != nil {
 			return err
 		}
@@ -44,22 +43,18 @@ func (store *EtcdStore) Get(key string, v interface{}) error {
 func (store *EtcdStore) KeysByPrefix(prefix string) ([]string, error) {
 	// Prefix should corresponding to a directory name, and will return all the nodes inside the directory
 	keys := make([]string, 0)
-	if resp, err := store.keysApi.Get(store.ctx, prefix, nil); err != nil {
-		if cerr, ok := err.(client.Error); ok && cerr.Code == client.ErrorCodeKeyNotFound {
-			return keys, storage.ErrNoSuchKey
-		}
+	if resp, err := store.keysApi.Get(store.ctx, prefix, client.WithPrefix()); err != nil {
 		return keys, err
 	} else {
-		if resp.Node == nil {
-			return keys, fmt.Errorf("Etcd store returns a nil node")
+		if len(resp.Kvs) == 0 {
+			return keys, storage.ErrNoSuchKey
 		}
-		if !resp.Node.Dir {
-			return keys, fmt.Errorf("Etcd store returns a non-directory node")
-		}
-		for _, node := range resp.Node.Nodes {
-			if node != nil {
-				keys = append(keys, node.Key)
+
+		for _, ev := range resp.Kvs {
+			if string(ev.Key) == prefix {
+				return []string{}, fmt.Errorf("Etcd store returns a non-directory node")
 			}
+			keys = append(keys, string(ev.Key))
 		}
 	}
 	return keys, nil
@@ -84,7 +79,7 @@ func (store *EtcdStore) Set(key string, v interface{}, force ...bool) error {
 				return nil
 			}
 		}
-		_, err := store.keysApi.Set(store.ctx, key, string(data), nil)
+		_, err := store.keysApi.Put(store.ctx, key, string(data))
 		if err == nil {
 			store.keyHashes[key] = dataHash
 		}
@@ -93,7 +88,7 @@ func (store *EtcdStore) Set(key string, v interface{}, force ...bool) error {
 }
 
 func (store *EtcdStore) Remove(key string) error {
-	_, err := store.keysApi.Delete(store.ctx, key, nil)
+	_, err := store.keysApi.Delete(store.ctx, key)
 	if err != nil {
 		store.Lock()
 		delete(store.keyHashes, key)
@@ -112,11 +107,14 @@ func (store *EtcdStore) TryRemoveDir(key string) {
 }
 
 func (store *EtcdStore) deleteDir(key string, recursive bool) error {
-	opts := client.DeleteOptions{
-		Recursive: recursive,
-		Dir:       true,
+	if !recursive {
+		keys, _ := store.KeysByPrefix(key)
+		if len(keys) > 0 {
+			return fmt.Errorf("Etcd exist subKeys")
+		}
 	}
-	_, err := store.keysApi.Delete(store.ctx, key, &opts)
+
+	_, err := store.keysApi.Delete(store.ctx, key, client.WithPrefix())
 	return err
 }
 
@@ -127,11 +125,9 @@ func NewStore(addr string, isDebug bool) (storage.Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	if false && isDebug {
-		client.EnablecURLDebug()
-	}
+
 	s := &EtcdStore{
-		keysApi:   client.NewKeysAPI(c),
+		keysApi:   c,
 		ctx:       context.Background(),
 		keyHashes: make(map[string]uint64),
 	}
